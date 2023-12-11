@@ -1,17 +1,24 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	"fmt"
+	"log"
+	"log/slog"
 	"os"
 
+	"template/internal/config"
+
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	k       = koanf.New(".")
+	c       config.Config
+	logger  *slog.Logger
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -45,31 +52,53 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is configs/template.toml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "configs/config.toml", "config file (default is configs/config.toml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Search config in home directory with name ".template" (without extension).
-		viper.AddConfigPath("configs")
-		viper.SetConfigType("toml")
-		viper.SetConfigName("template")
+	f := file.Provider(cfgFile)
+	err := k.Load(f, toml.Parser())
+	if err != nil {
+		log.Printf("error loading config: %v", err)
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	levelVar := slog.LevelVar{}
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: k.Bool("log.add_source"),
+		Level:     &levelVar,
+	}))
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	err = f.Watch(func(event interface{}, err error) {
+		if err != nil {
+			logger.Error("watch error", "err", err)
+			return
+		}
+
+		logger.Info("config changed. Reloading ...")
+		k = koanf.New(".")
+		if err := k.Load(f, toml.Parser()); err != nil {
+			logger.Error("error loading config", "err", err)
+			return
+		}
+		logger.Info("config", "config", k.Raw())
+
+		err = levelVar.UnmarshalText(k.Bytes("log.level"))
+		if err != nil {
+			levelVar.Set(slog.LevelInfo)
+			logger.Info("invalid log level, use info instead")
+		}
+	})
+	if err != nil {
+		log.Printf("error watching file: %v", err)
 	}
 
-	fmt.Printf("viper.AllSettings(): %v\n", viper.AllSettings())
+	c = config.DefaultConfig
+	err = k.Unmarshal("", &c)
+	if err != nil {
+		log.Printf("error unmarshalling config: %v", err)
+	}
 }

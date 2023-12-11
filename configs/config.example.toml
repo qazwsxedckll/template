@@ -1,0 +1,4 @@
+[log]
+# level can be changed at runtime
+level = "info"
+add_source = false

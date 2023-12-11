@@ -1,4 +1,4 @@
-FROM golang:1.21.1 AS builder
+FROM golang:1.21 AS builder
 
 WORKDIR /app
 RUN go env -w GOPROXY=https://goproxy.cn,direct
@@ -12,11 +12,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 RUN --mount=target=. \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 go build -o /out/core ./core
+    CGO_ENABLED=0 go build -o /out/main .
 
-FROM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian12
 WORKDIR /app
-COPY --from=builder /out/core .
+COPY --from=builder /out/main .
 
-ENTRYPOINT [ "./core" ]
+ENTRYPOINT [ "./main" ]
 CMD [ "run" ]
