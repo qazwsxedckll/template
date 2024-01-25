@@ -14,7 +14,7 @@ RUN --mount=target=. \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -o /out/main .
 
-FROM gcr.io/distroless/static-debian12
+FROM debian:bookworm-slim
 WORKDIR /app
 COPY --from=builder /out/main .
 
