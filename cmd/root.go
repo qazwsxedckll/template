@@ -89,16 +89,16 @@ func initConfig() {
 		err = levelVar.UnmarshalText(k.Bytes("log.level"))
 		if err != nil {
 			levelVar.Set(slog.LevelInfo)
-			logger.Info("invalid log level, use info instead")
+			logger.Warn("invalid log level, use info instead")
 		}
 	})
 	if err != nil {
-		log.Printf("error watching file: %v", err)
+		logger.Error("error watching file", "err", err)
 	}
 
 	c = config.DefaultConfig
 	err = k.Unmarshal("", &c)
 	if err != nil {
-		log.Printf("error unmarshalling config: %v", err)
+		logger.Error("error unmarshalling config", "err", err)
 	}
 }
