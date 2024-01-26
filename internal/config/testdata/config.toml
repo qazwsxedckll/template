@@ -1,0 +1,4 @@
+[Log]
+level = "debug"
+add_source = true
+to_file = true
