@@ -1,9 +1,11 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"template/internal/config"
 
@@ -14,10 +16,11 @@ import (
 )
 
 var (
-	cfgFile string
-	k       = koanf.New(".")
-	c       config.Config
-	logger  *slog.Logger
+	cfgFile  string
+	k        = koanf.New(".")
+	c        config.Config
+	logger   *slog.Logger
+	levelVar = slog.LevelVar{}
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -46,7 +49,7 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initConfig, initLogger)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -60,17 +63,21 @@ func init() {
 }
 
 func initConfig() {
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	f := file.Provider(cfgFile)
 	err := k.Load(f, toml.Parser())
 	if err != nil {
-		log.Printf("error loading config: %v", err)
+		logger.Error("error loading config", "err", err)
 	}
 
-	levelVar := slog.LevelVar{}
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: k.Bool("log.add_source"),
-		Level:     &levelVar,
-	}))
+	c = config.DefaultConfig
+	err = k.Unmarshal("", &c)
+	if err != nil {
+		logger.Error("error unmarshalling config", "err", err)
+	}
+
+	logger.Info("config", "config", k.Raw())
 
 	err = f.Watch(func(event interface{}, err error) {
 		if err != nil {
@@ -95,10 +102,47 @@ func initConfig() {
 	if err != nil {
 		logger.Error("error watching file", "err", err)
 	}
+}
 
-	c = config.DefaultConfig
-	err = k.Unmarshal("", &c)
+func initLogger() {
+	err := levelVar.UnmarshalText([]byte(c.Log.Level))
 	if err != nil {
-		logger.Error("error unmarshalling config", "err", err)
+		logger.Info("invalid log level, use INFO instead")
+		levelVar.Set(slog.LevelInfo)
 	}
+
+	var writers []io.Writer
+	if c.Log.ToFile {
+		file, err := newLogFile()
+		if err != nil {
+			panic(fmt.Errorf("cannot create log file: %w", err))
+		}
+		writers = append(writers, file)
+	}
+	writers = append(writers, os.Stdout)
+	mw := io.MultiWriter(writers...)
+
+	logger = slog.New(slog.NewJSONHandler(mw, &slog.HandlerOptions{
+		AddSource: c.Log.AddSource,
+		Level:     &levelVar,
+	}))
+}
+
+func newLogFile() (io.Writer, error) {
+	if err := os.MkdirAll("log", 0o744); err != nil {
+		return nil, fmt.Errorf("cannot create log directory: %w", err)
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get hostname: %w", err)
+	}
+
+	file, err := os.OpenFile("log/thingcross-core."+time.Now().Format("20060102-150405")+"."+hostname+"."+fmt.Sprint(os.Getpid())+".json",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open file: %w", err)
+	}
+
+	return file, nil
 }
