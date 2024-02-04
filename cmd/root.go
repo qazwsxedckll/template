@@ -138,7 +138,7 @@ func newLogFile() (io.Writer, error) {
 		return nil, fmt.Errorf("cannot get hostname: %w", err)
 	}
 
-	file, err := os.OpenFile("log/thingcross-core."+time.Now().Format("20060102-150405")+"."+hostname+"."+fmt.Sprint(os.Getpid())+".json",
+	file, err := os.OpenFile("log/"+os.Args[0]+"."+time.Now().Format("20060102-150405")+"."+hostname+"."+fmt.Sprint(os.Getpid())+".json",
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open file: %w", err)
