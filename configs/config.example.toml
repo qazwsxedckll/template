@@ -2,3 +2,5 @@
 # level can be changed at runtime
 level = "info"
 add_source = false
+to_file = false
+base_name = "log"

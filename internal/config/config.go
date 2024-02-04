@@ -16,4 +16,5 @@ type Log struct {
 	Level     string `koanf:"level"`
 	AddSource bool   `koanf:"add_source"`
 	ToFile    bool   `koanf:"to_file"`
+	BaseName  string `koanf:"base_name"`
 }
