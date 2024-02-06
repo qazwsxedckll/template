@@ -77,7 +77,7 @@ func initConfig() {
 		logger.Error("error unmarshalling config", "err", err)
 	}
 
-	logger.Info("config", "config", k.Raw())
+	logger.Info("config", "config", c)
 
 	err = f.Watch(func(event interface{}, err error) {
 		if err != nil {
