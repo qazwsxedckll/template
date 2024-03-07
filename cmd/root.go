@@ -2,16 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"time"
 
 	"template/internal/config"
 
+	"github.com/alecthomas/units"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+	"github.com/qazwsxedckll/logh"
 	"github.com/spf13/cobra"
 )
 
@@ -111,39 +112,32 @@ func initLogger() {
 		levelVar.Set(slog.LevelInfo)
 	}
 
-	var writers []io.Writer
+	var handler slog.Handler
 	if c.Log.ToFile {
-		file, err := newLogFile()
+		size, err := units.ParseStrictBytes(c.Log.RotateSize)
 		if err != nil {
-			panic(fmt.Errorf("cannot create log file: %w", err))
+			logger.Info("invalid log rotate size, use 100MB instead", "err", err, "size", c.Log.RotateSize)
+			size = int64(100 * units.MB)
 		}
-		writers = append(writers, file)
-	}
-	writers = append(writers, os.Stdout)
-	mw := io.MultiWriter(writers...)
+		interval, err := time.ParseDuration(c.Log.RotateInterval)
+		if err != nil {
+			logger.Info("invalid log rotate interval, use 24h instead", "err", err, "interval", c.Log.RotateInterval)
+			interval = 24 * time.Hour
+		}
 
-	logger = slog.New(slog.NewJSONHandler(mw, &slog.HandlerOptions{
-		AddSource: c.Log.AddSource,
-		Level:     &levelVar,
-	}))
-}
-
-func newLogFile() (io.Writer, error) {
-	if err := os.MkdirAll("log", 0o744); err != nil {
-		return nil, fmt.Errorf("cannot create log directory: %w", err)
-	}
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get hostname: %w", err)
-	}
-
-	file, err := os.OpenFile("log"+string(os.PathSeparator)+k.String("log.base_name")+
-		"."+time.Now().Format("20060102-150405")+"."+hostname+"."+fmt.Sprint(os.Getpid())+".json",
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open file: %w", err)
+		handler, err = logh.NewRotateJSONHandler(c.Log.Directory, c.Log.BaseName, int(size), &slog.HandlerOptions{
+			AddSource: c.Log.AddSource,
+			Level:     &levelVar,
+		}, logh.WithRotateInterval(interval))
+		if err != nil {
+			panic(fmt.Sprintf("error creating rotate handler: %v", err))
+		}
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: c.Log.AddSource,
+			Level:     &levelVar,
+		})
 	}
 
-	return file, nil
+	logger = slog.New(handler)
 }

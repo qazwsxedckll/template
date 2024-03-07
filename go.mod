@@ -1,13 +1,15 @@
 module template
 
-go 1.21.5
+go 1.22.0
 
 require (
+	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v0.1.0
 	github.com/knadh/koanf/v2 v2.0.1
+	github.com/qazwsxedckll/logh v0.1.1
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
