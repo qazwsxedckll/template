@@ -29,5 +29,6 @@ configs/*.toml
 !configs/*.example.toml
 
 log/
+release/
 
 nohub.out

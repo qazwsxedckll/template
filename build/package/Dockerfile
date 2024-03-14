@@ -1,7 +1,8 @@
-FROM golang:1.21 AS builder
+FROM golang AS builder
 
 WORKDIR /app
-RUN go env -w GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOTOOLCHAIN=auto
 
 # modifiy other files will not invalidate cache
 RUN --mount=type=cache,target=/go/pkg/mod \

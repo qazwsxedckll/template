@@ -22,6 +22,7 @@ var (
 	c        config.Config
 	logger   *slog.Logger
 	levelVar = slog.LevelVar{}
+	Version  string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -38,6 +39,7 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) {
 	// },
+	Version: Version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
