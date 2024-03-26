@@ -71,13 +71,13 @@ func initConfig() {
 	f := file.Provider(cfgFile)
 	err := k.Load(f, toml.Parser())
 	if err != nil {
-		logger.Error("error loading config", "err", err)
+		panic(fmt.Sprintf("error loading config: %v", err))
 	}
 
 	c = config.DefaultConfig
 	err = k.Unmarshal("", &c)
 	if err != nil {
-		logger.Error("error unmarshalling config", "err", err)
+		panic(fmt.Sprintf("error unmarshalling config: %v", err))
 	}
 
 	logger.Info("config", "config", c)
