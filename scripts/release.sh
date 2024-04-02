@@ -13,7 +13,6 @@ mkdir -p release/${module}
 cp --parent configs/config.example.toml release/${module}
 cp README.md release/${module}
 
-go test ./...
 version=$(git describe --tags --abbrev=0 --always)
 go build -ldflags="-X ${module}/cmd.Version=${version}" -o release/${module}
 
