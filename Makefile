@@ -5,9 +5,6 @@ PROJECT := $(shell basename $(PWD))
 .PHONY: build
 # build
 build:
-	GOTOOLCHAIN=auto
-	go mod tidy
-
 	CGO_ENABLED=0 go build -o $(PROJECT) .
 
 .PHONY: dev
@@ -18,7 +15,7 @@ dev:
 .PHONY: run
 # run service background
 run:
-	nohup ${PROJECT} run 2>&1 &
+	nohup ./${PROJECT} run > nohup.out 2>&1 &
 
 .PHONY: stop
 # stop
