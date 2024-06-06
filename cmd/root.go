@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"template/internal/config"
 
 	"github.com/alecthomas/units"
 	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 	"github.com/qazwsxedckll/logh"
@@ -72,6 +74,15 @@ func initConfig() {
 	err := k.Load(f, toml.Parser())
 	if err != nil {
 		panic(fmt.Sprintf("error loading config: %v", err))
+	}
+
+	envPrefix := k.String("env.prefix")
+	err = k.Load(env.Provider(envPrefix, ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, envPrefix)), "__", ".", -1)
+	}), nil)
+	if err != nil {
+		panic(fmt.Sprintf("error loading env: %v", err))
 	}
 
 	c = config.DefaultConfig
