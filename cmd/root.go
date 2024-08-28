@@ -138,10 +138,17 @@ func initLogger() {
 			interval = 24 * time.Hour
 		}
 
+		options := []logh.Option{
+			logh.WithRotateInterval(interval),
+		}
+		if c.Log.RotateAtMidnight {
+			options = append(options, logh.WithRotateAtMidnight())
+		}
+
 		handler, err = logh.NewRotateJSONHandler(c.Log.Directory, c.Log.BaseName, int(size), &slog.HandlerOptions{
 			AddSource: c.Log.AddSource,
 			Level:     &levelVar,
-		}, logh.WithRotateInterval(interval))
+		}, options...)
 		if err != nil {
 			panic(fmt.Sprintf("error creating rotate handler: %v", err))
 		}

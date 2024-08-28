@@ -11,3 +11,4 @@ base_name = "test"
 directory = "log"
 rotate_size = "100MB"
 rotate_interval = "24h" # valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+rotate_at_midnight = true
