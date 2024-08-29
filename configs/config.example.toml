@@ -1,6 +1,6 @@
 [env]
-# example: TEST_LOG__LEVEL=debug
-prefix = "TEST_"
+# example: TEMPLATE_LOG__LEVEL=debug
+prefix = "TEMPLATE_"
 
 [log]
 # level can be changed at runtime

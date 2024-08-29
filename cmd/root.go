@@ -4,23 +4,17 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"template/internal/config"
 
 	"github.com/alecthomas/units"
-	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
 	"github.com/qazwsxedckll/logh"
 	"github.com/spf13/cobra"
 )
 
 var (
 	cfgFile  string
-	k        = koanf.New(".")
 	c        config.Config
 	logger   *slog.Logger
 	levelVar = slog.LevelVar{}
@@ -54,8 +48,6 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig, initLogger)
-
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
@@ -65,63 +57,26 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	initConfig()
+	initLogger()
+	logger.Info("config loaded", "config", c)
 }
 
 func initConfig() {
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
-	f := file.Provider(cfgFile)
-	err := k.Load(f, toml.Parser())
+	var err error
+	c, err = config.Load(cfgFile)
 	if err != nil {
 		panic(fmt.Sprintf("error loading config: %v", err))
-	}
-
-	envPrefix := k.String("env.prefix")
-	err = k.Load(env.Provider(envPrefix, ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, envPrefix)), "__", ".", -1)
-	}), nil)
-	if err != nil {
-		panic(fmt.Sprintf("error loading env: %v", err))
-	}
-
-	c = config.DefaultConfig
-	err = k.Unmarshal("", &c)
-	if err != nil {
-		panic(fmt.Sprintf("error unmarshalling config: %v", err))
-	}
-
-	logger.Info("config", "config", c)
-
-	err = f.Watch(func(event interface{}, err error) {
-		if err != nil {
-			logger.Error("watch error", "err", err)
-			return
-		}
-
-		logger.Info("config changed. Reloading ...")
-		k = koanf.New(".")
-		if err := k.Load(f, toml.Parser()); err != nil {
-			logger.Error("error loading config", "err", err)
-			return
-		}
-		logger.Info("config", "config", k.Raw())
-
-		err = levelVar.UnmarshalText(k.Bytes("log.level"))
-		if err != nil {
-			levelVar.Set(slog.LevelInfo)
-			logger.Warn("invalid log level, use info instead")
-		}
-	})
-	if err != nil {
-		logger.Error("error watching file", "err", err)
 	}
 }
 
 func initLogger() {
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	err := levelVar.UnmarshalText([]byte(c.Log.Level))
 	if err != nil {
-		logger.Info("invalid log level, use INFO instead")
+		logger.Warn("invalid log level, use INFO instead")
 		levelVar.Set(slog.LevelInfo)
 	}
 
@@ -129,12 +84,12 @@ func initLogger() {
 	if c.Log.ToFile {
 		size, err := units.ParseStrictBytes(c.Log.RotateSize)
 		if err != nil {
-			logger.Info("invalid log rotate size, use 100MB instead", "err", err, "size", c.Log.RotateSize)
+			logger.Warn("invalid log rotate size, use 100MB instead", "err", err, "size", c.Log.RotateSize)
 			size = int64(100 * units.MB)
 		}
 		interval, err := time.ParseDuration(c.Log.RotateInterval)
 		if err != nil {
-			logger.Info("invalid log rotate interval, use 24h instead", "err", err, "interval", c.Log.RotateInterval)
+			logger.Warn("invalid log rotate interval, use 24h instead", "err", err, "interval", c.Log.RotateInterval)
 			interval = 24 * time.Hour
 		}
 
@@ -160,4 +115,9 @@ func initLogger() {
 	}
 
 	logger = slog.New(handler)
+
+	err = config.Watch(cfgFile, &levelVar, logger)
+	if err != nil {
+		panic(fmt.Sprintf("error watching config: %v", err))
+	}
 }
