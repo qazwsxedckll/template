@@ -12,7 +12,11 @@ mkdir -p release/
 rm -rf release/*
 
 mkdir -p release/${module}
-cp --parent configs/config.example.toml release/${module}
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    ditto configs release/${module}/configs
+else
+    cp --parent configs/config.example.toml release/${module}
+fi
 cp README.md release/${module}
 
 version=$(git describe --tags --abbrev=0 --always)
