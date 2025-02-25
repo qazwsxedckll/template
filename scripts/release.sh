@@ -13,7 +13,7 @@ rm -rf release/*
 
 mkdir -p release/${module}
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    ditto configs/config.example.toml release/${module}
+    ditto configs/*.example.toml release/${module}/configs/
 else
     cp --parent configs/config.example.toml release/${module}
 fi

@@ -28,4 +28,4 @@ esac
 
 full_name=${module}:${tag}
 
-docker build --pull -t ${full_name} -f ${dockerfile} ${workspace}
+docker build -t ${full_name} -f ${dockerfile} ${workspace}
