@@ -60,7 +60,6 @@ func init() {
 
 	initConfig()
 	initLogger()
-	logger.Info("config loaded", "config", c)
 }
 
 func initConfig() {
